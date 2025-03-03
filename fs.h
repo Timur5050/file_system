@@ -9,6 +9,9 @@
 #define BITMAP_INODE_BLOCKS 1
 #define BITMAP_DATA_BLOCKS 1
 #define SUPERBLOCKS 1
+#define DIRECT_BLOCKS 8
+#define INDIRECT_BLOCKS 8
+
 
 #define TOTAL_BLOCKS (INODE_BLOCKS + DATA_BLOCKS + BITMAP_INODE_BLOCKS + BITMAP_DATA_BLOCKS + SUPERBLOCKS)
 
@@ -29,8 +32,8 @@ typedef struct inode {
     uint16_t gid;
     uint16_t links_count;
     uint32_t blocks;
-    uint32_t block[8]; 
-    uint32_t indirect_block;
+    uint32_t *direct_blocks; 
+    uint32_t *indirect_block;
 } inode;
 
 typedef struct dir_entry {
@@ -41,15 +44,15 @@ typedef struct dir_entry {
 } dir_entry;
 
 typedef struct block_entry {
-    uint32_t data[1024];
+    uint32_t data[BLOCK_SIZE / sizeof(uint32_t)];
 } block;
 
 struct disk_mem {
     superblock disk_superblock;
-    int i_bmap[1024];
-    int d_bmap[1024];
-    inode inode_list[5];
-    void* block_list[56];
+    uint8_t *i_bmap;
+    uint8_t *d_bmap;
+    inode *inode_list;
+    void **block_list;
 };
 
 void init_superblock(superblock *sb);
