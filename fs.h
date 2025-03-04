@@ -2,10 +2,15 @@
 #define FS_H
 
 #include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <time.h>
+#include <sys/time.h>
+#include <string.h>
 
 #define BLOCK_SIZE 4096  
-#define INODE_BLOCKS 5
-#define DATA_BLOCKS 56
+#define INODE_BLOCKS 15
+#define DATA_BLOCKS 110
 #define BITMAP_INODE_BLOCKS 1
 #define BITMAP_DATA_BLOCKS 1
 #define SUPERBLOCKS 1
@@ -21,40 +26,44 @@ typedef struct superblock {
     uint32_t data_start;
     uint32_t inode_bitmap_start;
     uint32_t data_bitmap_start;
-    uint32_t inode_count;
+    uint32_t inode_count; 
 } superblock;
 
 typedef struct inode {
-    uint16_t mode;
-    uint16_t uid;
-    uint32_t size;
-    uint32_t mtime;
-    uint16_t gid;
-    uint16_t links_count;
-    uint32_t blocks;
-    uint32_t *direct_blocks; 
-    uint32_t *indirect_block;
+    uint16_t mode; // dir or file (0 - file; 1 - dir)
+    uint16_t uid; // id
+    uint32_t size; // file size bytes
+    uint32_t mtime; // хз шо це, вроді час створення але там з приколом   
+    uint16_t links_count; // reference counter. how many processes reference to it
+    uint32_t *direct_blocks; // indirect blocks pointers 
+    uint32_t *indirect_block; // direct blocks pointers
 } inode;
-
+  
 typedef struct dir_entry {
-    uint32_t inum;
+    uint32_t inum; // inode address ot just index of that
     uint16_t reclen;
     uint8_t strlen;
-    char name[64]; 
+    char name[64]; // file or directory name
 } dir_entry;
 
-typedef struct block_entry {
+typedef struct dir {
+    dir_entry data[BLOCK_SIZE / sizeof(dir_entry)];
+} dir;
+
+typedef struct block {
     uint32_t data[BLOCK_SIZE / sizeof(uint32_t)];
 } block;
 
-struct disk_mem {
-    superblock disk_superblock;
+typedef struct disk_mem {
+    superblock *disk_superblock;
     uint8_t *i_bmap;
     uint8_t *d_bmap;
-    inode *inode_list;
+    inode **inode_list;
     void **block_list;
-};
+} disk_mem;
 
 void init_superblock(superblock *sb);
+void init_root_directory(disk_mem *dm);
+void init_disk_mem(disk_mem* dm);
 
-#endif // FS_H
+#endif 
