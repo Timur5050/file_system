@@ -40,9 +40,9 @@ typedef struct inode {
 } inode;
   
 typedef struct dir_entry {
-    uint32_t inum; // inode address ot just index of that
-    uint16_t reclen;
-    uint8_t strlen;
+    uint32_t inum; // inode address of file or dir 
+    uint16_t reclen; // тут кількість блоків зайнятих, якщо це файл. якшо це папка - кількість записів у директорію
+    uint8_t strlen; // довжина назви запису
     char name[64]; // file or directory name
 } dir_entry;
 
