@@ -17,6 +17,8 @@ int main() {
     disk_mem* dm = (disk_mem*)malloc(sizeof(disk_mem));
     init_disk_mem(dm);
     init_root_directory(dm);
-    
+    print_all_inodes(dm);
+
+
     return 0;
 }
