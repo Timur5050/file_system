@@ -65,5 +65,6 @@ typedef struct disk_mem {
 void init_superblock(superblock *sb);
 void init_root_directory(disk_mem *dm);
 void init_disk_mem(disk_mem* dm);
+void print_all_inodes(disk_mem* dm);
 
 #endif 
