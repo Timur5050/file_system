@@ -25,6 +25,7 @@ void init_root_directory(disk_mem *dm)
     
 
     inode* root_inode = (inode*)malloc(sizeof(inode));
+    
     root_inode->uid = 0;
     root_inode->mode = 1;
     root_inode->size = sizeof(dir);
@@ -48,6 +49,8 @@ void init_root_directory(disk_mem *dm)
     root_dir->data[0].reclen = 1;
     root_dir->data[0].strlen = 1;
     strcpy(root_dir->data[0].name, ".");
+
+    dm->inode_list[0] = root_inode;
 }
 
 
@@ -106,7 +109,7 @@ int add_new_file_to_directory( // 2- no such dir, 0 - no space in a dir, 1 - suc
 
     for(int i = 0; i < BLOCK_SIZE / sizeof(dir_entry); i++)
     {
-        if(curr_dir->data[i]->inum == -1)
+        if(curr_dir->data[i].inum == -1)
         {
             index_for_new_entry = i;
             break;
@@ -117,23 +120,49 @@ int add_new_file_to_directory( // 2- no such dir, 0 - no space in a dir, 1 - suc
     {
         return 0;
     }
-    curr_dir->data[index_for_new_entry]->inum = *new_inode;
-    curr_dir->data[index_for_new_entry]->reclen = *reclen;
-    strcpy(curr_dir->data[index_for_new_entry]->name, name);
+    curr_dir->data[index_for_new_entry].inum = *new_inode;
+    curr_dir->data[index_for_new_entry].reclen = *reclen;
+    strcpy(curr_dir->data[index_for_new_entry].name, name);
 
     return 1;
 }
 
 
-// void print_all_inodes(disk_mem* dm)
-// {
-    
-// }
+void print_all_inodes(disk_mem* dm)
+{
+    for(int i = 0; i < INODE_BLOCKS; i++)
+    {
+        inode* temp_inote = dm->inode_list[i];
+        if(NULL == temp_inote)
+        {
+            continue;
+        }
+        printf("mode : %d\n", temp_inote->mode);
+        printf("uid : %d\n", temp_inote->uid);
+        printf("size : %d\n", temp_inote->size);
+        printf("mtime : %d\n", temp_inote->mtime);
+        printf("links_count : %d\n", temp_inote->links_count);
+        printf("direct blocks : ");
+        for(int j = 0; j < DIRECT_BLOCKS; j++)
+        {
+            printf("%d\t", temp_inote->direct_blocks[j]);
+        }
+        printf("\nindirect blocks : ");
+        for(int j = 0; j < INDIRECT_BLOCKS; j++)
+        {
+            printf("%d\t", temp_inote->indirect_block[j]);
+        }
+        printf("\n");
+    }
+}
 
-// void print_all_blocks(disk_mem* dm)
-// {
-    
-// }
+void print_all_blocks(disk_mem* dm)
+{
+    for(int i = 0; i < dm->block_list; i++)
+    {
+
+    }
+}
 
 // void print_all_dir_entries(disk_mem* dm, uint32_t *inode_number_of_dir)
 // {
