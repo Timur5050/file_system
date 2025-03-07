@@ -18,6 +18,11 @@ int main() {
     init_disk_mem(dm);
     init_root_directory(dm);
     print_all_inodes(dm);
+    printf("\n\n");
+    print_all_blocks(dm);
+    printf("\n\n");
+
+    print_all_dir_entries(dm, 0);
 
 
     return 0;
