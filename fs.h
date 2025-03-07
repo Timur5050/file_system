@@ -66,5 +66,7 @@ void init_superblock(superblock *sb);
 void init_root_directory(disk_mem *dm);
 void init_disk_mem(disk_mem* dm);
 void print_all_inodes(disk_mem* dm);
+void print_all_blocks(disk_mem* dm);
+void print_all_dir_entries(disk_mem* dm, uint32_t inode_number_of_dir);
 
 #endif 
