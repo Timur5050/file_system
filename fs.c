@@ -1,5 +1,12 @@
 #include "fs.h"
 
+uint32_t get_curr_time()
+{
+    struct timeval tv;
+    gettimeofday(&tv, NULL);
+    return tv.tv_sec;
+}
+
 void init_superblock(superblock *sb) {
     sb->total_blocks = TOTAL_BLOCKS;
     sb->inode_start = SUPERBLOCKS + BITMAP_INODE_BLOCKS + BITMAP_DATA_BLOCKS;
@@ -29,9 +36,7 @@ void init_root_directory(disk_mem *dm)
     root_inode->uid = 0;
     root_inode->mode = 1;
     root_inode->size = sizeof(dir);
-    struct timeval tv;
-    gettimeofday(&tv, NULL);
-    root_inode->mtime = tv.tv_sec;
+    root_inode->mtime = get_curr_time();
     root_inode->links_count = 0;
     root_inode->direct_blocks = (uint32_t*)malloc(sizeof(uint32_t) * DIRECT_BLOCKS);
     root_inode->direct_blocks[0] = 0;
@@ -64,11 +69,8 @@ void init_disk_mem(disk_mem* dm)
 
     
     inode** inode_ls = (inode**)malloc(sizeof(inode*) * INODE_BLOCKS);
-    for(int i = 0; i < INODE_BLOCKS; i++)
-    {
-        inode_ls[i] = (inode*)malloc(sizeof(inode));
-    }
     void** block_ls = (void**)malloc(sizeof(void*) * DATA_BLOCKS);
+
     for(int i = 0; i < DATA_BLOCKS; i++)
     {
         block_ls[i] = NULL;
@@ -243,6 +245,11 @@ void print_all_dir_entries(disk_mem* dm, uint32_t inode_number_of_dir)
         for(int i = 0; i < DIRECT_BLOCKS; i++)
         {
             uint32_t curr_dir_inum = dir_inode->direct_blocks[i];
+            if(curr_dir_inum == -1)
+            {
+                continue;
+            }
+
             dir* curr_dir = (dir*)dm->block_list[curr_dir_inum];
 
             for(int j = 0; j < BLOCK_SIZE / sizeof(dir_entry); j++)
@@ -263,7 +270,129 @@ void print_all_dir_entries(disk_mem* dm, uint32_t inode_number_of_dir)
             }
         }
     }
+}
 
+
+void add_file_to_directory(disk_mem *dm, uint16_t inode_number_of_dir, inode* file_inode, char* file_name)
+{
+    inode *curr_inode = dm->inode_list[inode_number_of_dir];
+    dir_entry *needed_dir_entry = NULL;
+
+    for(int i = 0; i < DIRECT_BLOCKS; i++)
+    {
+        dir *curr_dir_block = (dir*)dm->block_list[curr_inode->direct_blocks[i]];
+        for(int j = 0; j < (BLOCK_SIZE / sizeof(dir_entry)); j++)
+        {
+            if(curr_dir_block->data[j].inum == -1)
+            {
+                needed_dir_entry = &curr_dir_block->data[j];
+                break;
+            }
+        }
+        if(needed_dir_entry)
+        {
+            break;;
+        }
+    }
+
+    needed_dir_entry->inum = file_inode->uid;
+    needed_dir_entry->reclen = curr_inode->size / BLOCK_SIZE;
+    needed_dir_entry->strlen = strlen(file_name);
+    strcpy(needed_dir_entry->name, file_name);
+}
+
+uint16_t create_new_file(disk_mem *dm, uint32_t *file_data) // -1 - no free data blocks
+{
+    // find new free block, put there file data
+    uint32_t new_data_index = -1;
+    for(int i = 0; i < DATA_BLOCKS; i++)
+    {
+        if(NULL == dm->block_list[i])
+        {
+            new_data_index = i;
+            break;
+        }
+    }
+    //printf("here : %d\n", new_data_index);
+    if(new_data_index == -1)
+    {
+        return -1;
+    }
+
+    block* new_data_block = (block*)malloc(sizeof(block));
+
+    uint32_t size_of_data_block = sizeof(file_data) / sizeof(uint32_t);
+    
+    for(int i = 0; i < size_of_data_block; i++)
+    {
+        new_data_block->data[i] = file_data[i];
+    }
+    dm->block_list[new_data_index] = (block*)new_data_block;
+
+    free(file_data);
+
+    uint32_t inode_number_of_new_file;
+    for(int i = 0; i < INODE_BLOCKS; i++)
+    {
+        if(NULL == dm->inode_list[i])
+        {
+            inode_number_of_new_file = i;
+            break;
+        }
+    }
+
+    inode *new_inode = (inode*)malloc(sizeof(inode));
+    
+    new_inode->mode = 0;
+    new_inode->uid = inode_number_of_new_file;
+    new_inode->size = sizeof(file_data);
+    new_inode->mtime = get_curr_time();
+    new_inode->links_count = 0;
+    new_inode->direct_blocks = (uint32_t*)malloc(sizeof(uint32_t) * DIRECT_BLOCKS);
+    new_inode->direct_blocks[0] = new_data_index;
+    for(int i = 1; i < DIRECT_BLOCKS; i++)
+    {
+        new_inode->direct_blocks[i] = -1;
+    } 
+    new_inode->indirect_block = (uint32_t*)malloc(sizeof(uint32_t) * INDIRECT_BLOCKS);
+    for(int i = 0; i < INDIRECT_BLOCKS; i++)
+    {
+        new_inode->indirect_block[i] = -1;
+    }
+
+    dm->inode_list[inode_number_of_new_file] = new_inode;
+    return new_inode->uid;
+
+}
+
+
+uint16_t create_file(
+    disk_mem* dm, 
+    uint32_t inode_number_of_dir,
+    char *file_name,
+    uint32_t *file_data
+    ) // -1 = file has not been created
+{
+    uint16_t new_inode_number = create_new_file(dm, file_data);
+
+    inode *inode_of_new_file = NULL;
+    for(int i = 0; i < INDIRECT_BLOCKS; i++)
+    {
+        if(dm->inode_list[i]->uid == new_inode_number)
+        {
+            inode_of_new_file = dm->inode_list[i];
+            break;
+        }
+    }
+    printf("here : %d : %d\n", inode_number_of_dir, inode_of_new_file->uid);
+    if(new_inode_number != -1)
+    {
+        printf("here : %d : %d\n", inode_number_of_dir, inode_of_new_file->uid);
+        add_file_to_directory(dm, inode_number_of_dir, inode_of_new_file, file_name);
+        return new_inode_number;
+    }
+    return -1;
+    
 }
 
 
