@@ -62,11 +62,16 @@ typedef struct disk_mem {
     void **block_list;
 } disk_mem;
 
+
+uint32_t get_curr_time();
 void init_superblock(superblock *sb);
 void init_root_directory(disk_mem *dm);
 void init_disk_mem(disk_mem* dm);
 void print_all_inodes(disk_mem* dm);
 void print_all_blocks(disk_mem* dm);
 void print_all_dir_entries(disk_mem* dm, uint32_t inode_number_of_dir);
+void add_file_to_directory(disk_mem *dm, uint16_t inode_number_of_dir, inode* file_inode, char* file_name);
+uint16_t create_new_file(disk_mem *dm, uint32_t *file_data);
+uint16_t create_file(disk_mem* dm, uint32_t inode_number_of_dir, char *file_name, uint32_t *file_data);
 
 #endif 
