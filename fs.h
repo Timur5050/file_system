@@ -11,8 +11,8 @@
 #define BLOCK_SIZE 4096  
 #define INODE_BLOCKS 15
 #define DATA_BLOCKS 110
-#define BITMAP_INODE_BLOCKS 1
-#define BITMAP_DATA_BLOCKS 1
+#define BITMAP_INODE_BLOCKS INODE_BLOCKS
+#define BITMAP_DATA_BLOCKS DATA_BLOCKS
 #define SUPERBLOCKS 1
 #define DIRECT_BLOCKS 8
 #define INDIRECT_BLOCKS 8
@@ -70,6 +70,8 @@ void init_disk_mem(disk_mem* dm);
 void print_all_inodes(disk_mem* dm);
 void print_all_blocks(disk_mem* dm);
 void print_all_dir_entries(disk_mem* dm, uint32_t inode_number_of_dir);
+void print_i_bmap_and_d_bmap(disk_mem *dm);
+void print_whole_dm(disk_mem *dm);
 void add_file_to_directory(disk_mem *dm, uint16_t inode_number_of_dir, inode* file_inode, char* file_name);
 uint16_t create_new_file(disk_mem *dm, uint32_t *file_data);
 uint16_t create_file(disk_mem* dm, uint32_t inode_number_of_dir, char *file_name, uint32_t *file_data);
