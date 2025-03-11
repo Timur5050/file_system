@@ -307,7 +307,22 @@ void print_whole_dm(disk_mem *dm)
     printf("\n\n");
 }
 
-
+void print_whole_data_from_file(disk_mem *dm, uint32_t inode_number)
+{
+    inode *curr_inode = dm->inode_list[inode_number];
+    for(int i = 0; i < DIRECT_BLOCKS; i++)
+    {
+        if(curr_inode->direct_blocks[i] != -1)
+        {
+            block *curr_block = dm->block_list[curr_inode->direct_blocks[i]];
+            uint16_t size = sizeof(curr_block->data) / sizeof(uint32_t);
+            for(int j = 0; j < size; j++)
+            {
+                printf("%d ", curr_block->data[j]);
+            }            
+        }
+    }
+}
 
 void add_file_to_directory(disk_mem *dm, uint16_t inode_number_of_dir, inode* file_inode, char* file_name)
 {
@@ -337,38 +352,8 @@ void add_file_to_directory(disk_mem *dm, uint16_t inode_number_of_dir, inode* fi
     strcpy(needed_dir_entry->name, file_name);
 }
 
-uint16_t create_new_file(disk_mem *dm, uint32_t *file_data) // -1 - no free data blocks
+uint16_t create_new_file(disk_mem *dm) // -1 - no free data blocks
 {
-    // find new free block, put there file data
-    uint32_t new_data_index = -1;
-    for(int i = 0; i < DATA_BLOCKS; i++)
-    {
-        if(NULL == dm->block_list[i] && dm->i_bmap[i] == 0)
-        {
-            new_data_index = i;
-            break;
-        }
-    }
-
-    if(new_data_index == -1)
-    {
-        return -1;
-    }
-
-    dm->d_bmap[new_data_index] = 1;
-
-    block* new_data_block = (block*)malloc(sizeof(block));
-
-    uint32_t size_of_data_block = sizeof(file_data) / sizeof(uint32_t);
-    
-    for(int i = 0; i < size_of_data_block; i++)
-    {
-        new_data_block->data[i] = file_data[i];
-    }
-    dm->block_list[new_data_index] = (block*)new_data_block;
-
-    free(file_data);
-
     uint32_t inode_number_of_new_file;
     for(int i = 0; i < INODE_BLOCKS; i++)
     {
@@ -390,13 +375,12 @@ uint16_t create_new_file(disk_mem *dm, uint32_t *file_data) // -1 - no free data
     
     new_inode->mode = 0;
     new_inode->uid = inode_number_of_new_file;
-    new_inode->size = sizeof(file_data);
+    new_inode->size = 0;
     new_inode->mtime = get_curr_time();
     new_inode->links_count = 0;
     new_inode->direct_blocks = (uint32_t*)malloc(sizeof(uint32_t) * DIRECT_BLOCKS);
-    new_inode->direct_blocks[0] = new_data_index;
 
-    for(int i = 1; i < DIRECT_BLOCKS; i++)
+    for(int i = 0; i < DIRECT_BLOCKS; i++)
     {
         new_inode->direct_blocks[i] = -1;
     } 
@@ -419,7 +403,7 @@ uint16_t create_file(
     uint32_t *file_data
     ) // -1 = file has not been created
 {
-    uint16_t new_inode_number = create_new_file(dm, file_data);
+    uint16_t new_inode_number = create_new_file(dm);
 
     inode *inode_of_new_file = NULL;
     for(int i = 0; i < INODE_BLOCKS; i++)
@@ -440,21 +424,19 @@ uint16_t create_file(
 }
 
 
-uint8_t add_data_to_file(
+int8_t add_data_to_file(
     disk_mem *dm, 
     uint16_t file_inode_number, 
-    uint32_t *file_data
+    uint32_t *file_data,
+    uint32_t data_size
 ) // -1 = error file adding data to file (inode not found) -2 - error no free data blocks
 {
 
     inode *curr_inode = dm->inode_list[file_inode_number];
-    if(NULL == curr_inode || curr_inode != 0)
+    if(NULL == curr_inode || curr_inode->mode != 0)
     {
         return -1;
     }
-
-    uint32_t remaining_size = data_size;
-    uint32_t *data_ptr = file_data;
 
     int last_block_index = -1;
     for(int i = 0; i < DIRECT_BLOCKS; i++)
@@ -466,6 +448,8 @@ uint8_t add_data_to_file(
         last_block_index = i;
     }
 
+    uint32_t data_block_pointer;
+
     if(last_block_index == -1)
     {
         last_block_index = 0;
@@ -476,16 +460,55 @@ uint8_t add_data_to_file(
                 curr_inode->direct_blocks[0] = i;
                 break;
             }
+            
         }
         if(curr_inode->direct_blocks[0] == -1)
         {
             return -2;
         }
+
+        block *new_block = (block*)malloc(sizeof(block));
+        dm->block_list[curr_inode->direct_blocks[0]] = new_block;
+        dm->d_bmap[curr_inode->direct_blocks[0]] = 1;
+
+        data_block_pointer = 0;
     }
+    else
+    {
+        data_block_pointer = (curr_inode->size % sizeof(block)) / sizeof(uint32_t);
+    }
+    block *bl = dm->block_list[curr_inode->direct_blocks[last_block_index]];
+    uint32_t new_data_index = 0;
 
-
-
-
+    while(last_block_index < 8 && new_data_index < data_size)
+    {
+        while(data_block_pointer < BLOCK_SIZE / sizeof(uint32_t) && new_data_index < data_size)
+        {
+            bl->data[data_block_pointer] = file_data[new_data_index];
+            new_data_index ++;
+            data_block_pointer ++;
+        }
+        if(new_data_index < data_size && last_block_index + 1 < DIRECT_BLOCKS)
+        {
+            last_block_index ++;
+            for(int i = 0; i < DATA_BLOCKS; i++)
+            {
+                if(dm->block_list[i] == NULL && dm->d_bmap == 0)
+                {
+                    curr_inode->direct_blocks[last_block_index] = i;
+                    dm->block_list = (block*)malloc(sizeof(block));
+                    dm->d_bmap[i] = 1;
+                    bl = dm->block_list[i];
+                    data_block_pointer = 0;
+                    break;
+                }
+            }
+        }
+        
+        bl += 1;
+    }
+    curr_inode->size += sizeof(uint32_t) * data_size;
+    return 1;
 }
 
 uint8_t add_data_to_file_by_dir(
