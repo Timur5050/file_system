@@ -511,12 +511,39 @@ int8_t add_data_to_file(
     return 1;
 }
 
-uint8_t add_data_to_file_by_dir(
+int8_t add_data_to_file_by_dir(
     disk_mem *dm,
     uint16_t directory_inode_number,
     char *file_name,
     uint32_t *file_data
-)
+) // -1 - no such dir
 {
+    inode *curr_inode = dm->inode_list[directory_inode_number];
+    if(NULL == curr_inode)
+    {
+        return -1;
+    }
+
+    uint32_t file_inode = 0;
+
+    for(int i = 0; i < DIRECT_BLOCKS; i++)
+    {
+        if(curr_inode->direct_blocks[i] == -1)
+        {
+            continue;
+        }
+        dir *dir_block = dm->block_list[curr_inode->direct_blocks[i]];
+        for(int j = 0; j < BLOCK_SIZE / sizeof(dir_entry); j++)
+        {
+            dir_entry *curr_dir_entry = dir_block->data[j];
+            if(strcmp(curr_dir_entry->name), file_name)
+            {
+                file_inode = curr_dir_entry->inum;
+                break;
+            }
+        }
+    }
+
+    
 
 }
