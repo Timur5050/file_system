@@ -324,9 +324,18 @@ void print_whole_data_from_file(disk_mem *dm, uint32_t inode_number)
     }
 }
 
-void add_file_to_directory(disk_mem *dm, uint16_t inode_number_of_dir, inode* file_inode, char* file_name)
+int8_t add_file_to_directory(
+    disk_mem *dm, 
+    uint16_t inode_number_of_dir,
+    inode* file_inode, 
+    char* file_name
+) // -1 - no such dir
 {
     inode *curr_inode = dm->inode_list[inode_number_of_dir];
+    if(NULL == curr_inode)
+    {
+        return -1;
+    }
     dir_entry *needed_dir_entry = NULL;
 
     for(int i = 0; i < DIRECT_BLOCKS; i++)
@@ -350,6 +359,8 @@ void add_file_to_directory(disk_mem *dm, uint16_t inode_number_of_dir, inode* fi
     needed_dir_entry->reclen = (curr_inode->size / BLOCK_SIZE) + 1 ;
     needed_dir_entry->strlen = strlen(file_name);
     strcpy(needed_dir_entry->name, file_name);
+    
+    return file_inode->uid;
 }
 
 uint16_t create_new_file(disk_mem *dm) // -1 - no free data blocks
@@ -435,6 +446,7 @@ int8_t add_data_to_file(
     inode *curr_inode = dm->inode_list[file_inode_number];
     if(NULL == curr_inode || curr_inode->mode != 0)
     {
+        printf("\nhere -1 : %d\n", file_inode_number);
         return -1;
     }
 
@@ -496,7 +508,7 @@ int8_t add_data_to_file(
                 if(dm->block_list[i] == NULL && dm->d_bmap == 0)
                 {
                     curr_inode->direct_blocks[last_block_index] = i;
-                    dm->block_list = (block*)malloc(sizeof(block));
+                    dm->block_list[i] = (block*)malloc(sizeof(block));
                     dm->d_bmap[i] = 1;
                     bl = dm->block_list[i];
                     data_block_pointer = 0;
@@ -508,15 +520,16 @@ int8_t add_data_to_file(
         bl += 1;
     }
     curr_inode->size += sizeof(uint32_t) * data_size;
-    return 1;
+    return file_inode_number;
 }
 
 int8_t add_data_to_file_by_dir(
     disk_mem *dm,
     uint16_t directory_inode_number,
     char *file_name,
-    uint32_t *file_data
-) // -1 - no such dir
+    uint32_t *file_data,
+    uint32_t data_size
+) // -1 - no such dir, -2  - no such file
 {
     inode *curr_inode = dm->inode_list[directory_inode_number];
     if(NULL == curr_inode)
@@ -524,7 +537,7 @@ int8_t add_data_to_file_by_dir(
         return -1;
     }
 
-    uint32_t file_inode = 0;
+    uint32_t file_inode = -1;
 
     for(int i = 0; i < DIRECT_BLOCKS; i++)
     {
@@ -535,15 +548,20 @@ int8_t add_data_to_file_by_dir(
         dir *dir_block = dm->block_list[curr_inode->direct_blocks[i]];
         for(int j = 0; j < BLOCK_SIZE / sizeof(dir_entry); j++)
         {
-            dir_entry *curr_dir_entry = dir_block->data[j];
-            if(strcmp(curr_dir_entry->name), file_name)
+            dir_entry curr_dir_entry = dir_block->data[j];
+            if(strcmp(curr_dir_entry.name, file_name) == 0)
             {
-                file_inode = curr_dir_entry->inum;
+                file_inode = curr_dir_entry.inum;
                 break;
             }
         }
     }
 
+    if(file_inode == -1)
+    {
+        return -2;
+    }
     
+    return add_data_to_file(dm, file_inode, file_data, data_size);
 
 }
