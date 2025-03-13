@@ -51,5 +51,9 @@ int main() {
     add_data_to_file(dm, 1, data, 10);
     printf("\n\n");
     print_whole_data_from_file(dm, 1);
+    int res1 = add_data_to_file_by_dir(dm, 0, "hello.txt", data, 10);
+    printf("\n\n");
+    print_whole_data_from_file(dm, 1);
+    printf("\n\nres : %d", res1);
     return 0;
 }
