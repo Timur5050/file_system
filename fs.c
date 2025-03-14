@@ -30,7 +30,6 @@ void init_root_directory(disk_mem *dm)
     int data_block_ind = 0;
     dm->block_list[data_block_ind] = (dir*)root_dir;
     
-
     inode* root_inode = (inode*)malloc(sizeof(inode));
     
     root_inode->uid = 0;
@@ -359,7 +358,7 @@ int8_t add_file_to_directory(
     needed_dir_entry->reclen = (curr_inode->size / BLOCK_SIZE) + 1 ;
     needed_dir_entry->strlen = strlen(file_name);
     strcpy(needed_dir_entry->name, file_name);
-    
+
     return file_inode->uid;
 }
 
@@ -410,8 +409,7 @@ uint16_t create_new_file(disk_mem *dm) // -1 - no free data blocks
 uint16_t create_file(
     disk_mem* dm, 
     uint32_t inode_number_of_dir,
-    char *file_name,
-    uint32_t *file_data
+    char *file_name
     ) // -1 = file has not been created
 {
     uint16_t new_inode_number = create_new_file(dm);
@@ -563,5 +561,205 @@ int8_t add_data_to_file_by_dir(
     }
     
     return add_data_to_file(dm, file_inode, file_data, data_size);
+}
+
+
+int32_t create_new_dir_inode(disk_mem *dm) // -1 = no free inode, -2 = no free block
+{
+    uint16_t new_inode_index = -1;
+
+    for(int i = 0; i < INODE_BLOCKS; i++)
+    {
+        if(NULL == dm->inode_list[i])
+        {
+            new_inode_index = i;
+            break;
+        }
+    }
+    if(new_inode_index == -1)
+    {
+        return -1;
+    }
+
+    dm->i_bmap[new_inode_index] = 1;
+
+    inode *new_inode = (inode*)malloc(sizeof(inode));
+    new_inode->mode = 1;
+    new_inode->uid = new_inode_index;
+    new_inode->size = 0;
+    new_inode->mtime = get_curr_time();
+    new_inode->links_count = 0;
+    new_inode->direct_blocks = (uint32_t*)malloc(sizeof(uint32_t) * DIRECT_BLOCKS);
+    for(int i = 0; i < DIRECT_BLOCKS; i++)
+    {
+        new_inode->direct_blocks[i] = -1;
+    }   
+
+    new_inode->indirect_block = (uint32_t*)malloc(sizeof(uint32_t) * INODE_BLOCKS);
+    for(int i = 0; i < INODE_BLOCKS; i++)
+    {
+        new_inode->indirect_block[i] = -1;
+    }
+    dm->inode_list[new_inode_index] = new_inode;
+    
+    return new_inode_index;
+}
+
+
+int32_t create_dir(
+    disk_mem *dm,
+    uint32_t inode_number_of_dir,
+    char *dir_name 
+) // -5 = no place in direct indexes list, -4 = no place in a dir, -3 = no such dir, -1 = no free inode, -2 = no free block 
+{
+    
+    inode* curr_dir_inode = (inode*)dm->inode_list[inode_number_of_dir];
+    if(NULL == curr_dir_inode)
+    {
+        return -3;
+    }
+    
+    uint16_t new_inode_dir = create_new_dir_inode(dm);
+
+    // finding place to put newly created dir into parent dir
+    
+    if(new_inode_dir > 0)
+    {
+        dir *curr_dir_block = NULL;
+        for(int i = 0; i < DIRECT_BLOCKS; i++)
+        {
+            if(curr_dir_inode->direct_blocks[i] != -1)
+            {
+                curr_dir_block = (dir*)dm->block_list[curr_dir_inode->direct_blocks[i]];
+                break;
+            }
+        }
+        if(NULL == curr_dir_block)
+        {
+            return -4;
+        }
+        dir_entry *new_dir_entry = NULL;
+        for(int j = 0; j < BLOCK_SIZE / sizeof(dir_entry); j++)
+        {  
+            if(curr_dir_block->data[j].inum == -1)
+            {
+                new_dir_entry = &curr_dir_block->data[j];
+                break;
+            }
+        }
+
+        if(NULL == new_dir_entry)
+        {
+            uint32_t new_dir_block_index = -1;
+            uint32_t new_direct_index = -1;
+            for(int j = 0; j < DIRECT_BLOCKS; j++)
+            {
+                if(curr_dir_inode->direct_blocks[j] == -1)
+                {
+                    new_direct_index = j;
+                    break;
+                }
+            }
+            if(new_direct_index == -1)
+            {
+                return -5; // no place in direct indexes list
+            }
+
+            for(int j = 0; j < DATA_BLOCKS; j++)
+            {
+                if(NULL == dm->block_list[j])
+                {
+                    dir *new_dir_block = (dir*)malloc(sizeof(dir));
+                    new_dir_entry = &(new_dir_block->data[0]);
+                    for(int k = 1; k < BLOCK_SIZE / sizeof(dir_entry); k++)
+                    {
+                        new_dir_block->data[k].inum = -1;
+                    }
+                    new_dir_block_index = j;
+                    dm->d_bmap[j] = 1;
+                    curr_dir_inode->size += sizeof(dir);
+
+                    dm->block_list[new_dir_block_index] = new_dir_block_index;
+
+                    break;
+                }
+            }
+            curr_dir_inode->direct_blocks[new_direct_index] = new_dir_block_index;
+        }
+        if(NULL == new_dir_entry)
+        {
+            return -6; // no free block in mem
+        }
+        new_dir_entry->inum = new_inode_dir;
+        new_dir_entry->reclen = 1;
+        new_dir_entry->strlen = strlen(dir_name);
+        strcpy(new_dir_entry->name, dir_name);
+        
+        // curr dir find
+        // !!!!!!!! add one block and default . and .. inodes here
+        inode *new_dir_inode = dm->inode_list[new_inode_dir];
+        
+        dir *new_dir_block_for_new_dir = (dir*)malloc(sizeof(dir));
+        new_dir_inode->size = sizeof(dir);
+        for(int i = 0; i < DATA_BLOCKS; i++)
+        {
+            if(NULL == dm->block_list[i])
+            {
+                dm->block_list[i] = new_dir_block_for_new_dir;
+                new_dir_inode->direct_blocks[0] = i;
+                
+                dm->d_bmap[i] = 1;
+                break;
+            }
+        }
+        for(int i = 0; i < (BLOCK_SIZE / sizeof(dir_entry)); i++)
+        {
+            new_dir_block_for_new_dir->data[i].inum = -1;
+        }
+        
+
+        if(new_dir_inode->direct_blocks[0] == -1)
+        {
+            return -6;
+        }
+        new_dir_block_for_new_dir->data[0].inum = inode_number_of_dir;;
+        int counter = 0;
+        for(int i = 0; i < DIRECT_BLOCKS; i++)
+        {
+            if(curr_dir_inode->direct_blocks[i] != -1)
+            {
+                counter++;
+            }
+        }
+        new_dir_block_for_new_dir->data[0].reclen = counter;
+        new_dir_block_for_new_dir->data[0].strlen = 2;
+        strcpy(new_dir_block_for_new_dir->data[0].name, "..");
+
+        new_dir_block_for_new_dir->data[1].inum = new_inode_dir;
+        new_dir_block_for_new_dir->data[1].reclen = 1;
+        new_dir_block_for_new_dir->data[1].strlen = 1;
+        strcpy(new_dir_block_for_new_dir->data[1].name, ".");
+    }
 
 }
+
+
+int32_t add_file_to_dir(disk_mem *dm, uint16_t inode_file)
+{
+
+}
+
+int32_t add_file_to_dir_by_name(disk_mem *dm, uint16_t inode_file)
+{
+    
+}
+
+int32_t add_dir_to_dir(disk_mem *dm)
+{
+
+}
+
+
+
+
+
