@@ -2,9 +2,9 @@
 #include "fs.h"
 
 
-typedef struct dir1 {
-    int *a;
-} dir1;
+
+uint32_t curr_dir_inode = 2;
+
 
 int main() {
     superblock sb;
@@ -22,8 +22,8 @@ int main() {
     print_all_dir_entries(dm, 0);
 
     char file_name[30] = "hello.txt";
-    uint32_t *data = (uint32_t*)malloc(sizeof(uint32_t) * 10);
-    for(uint32_t i = 0; i < 10; i++)
+    uint32_t *data = (uint32_t*)malloc(sizeof(uint32_t) * 2000);
+    for(uint32_t i = 0; i < 2000; i++)
     {   
         *(data + i) = i;
     }  
@@ -39,7 +39,7 @@ int main() {
 
     // int8_t a = add_data_to_file(dm, 1, data, 10);
     // print_whole_data_from_file(dm, 1);
-    add_data_to_file(dm, 1, data, 10);
+    add_data_to_file(dm, 1, data, 2000);
     // printf("\n\n");
     // print_whole_data_from_file(dm, 1);
     // add_data_to_file(dm, 1, data, 10);
@@ -47,7 +47,7 @@ int main() {
     // print_whole_data_from_file(dm, 1);
     // int res1 = add_data_to_file_by_dir(dm, 0, "hello.txt", data, 10);
     // printf("\n\n");
-    // print_whole_data_from_file(dm, 1);
+    print_whole_data_from_file(dm, 1);
     // printf("\n\nres : %d", res1);
 
     int a = create_dir(dm, 0, "new");
@@ -55,6 +55,8 @@ int main() {
     print_whole_dm(dm);
     print_all_dir_entries(dm, 0);
     // printf("\nres : %d\n", a);
+
+
 
     return 0;
 }
