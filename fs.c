@@ -991,3 +991,30 @@ void ls(disk_mem *dm, int32_t curr_dir_inode)
     }
     printf("\n");
 }
+
+int32_t cd(disk_mem *dm, uint32_t *curr_dir_inode, char *new_dir_name)
+{
+    inode *curr_inode = dm->inode_list[*curr_dir_inode];
+
+    for(int i = 0; i < DIRECT_BLOCKS; i++)
+    {
+        if(curr_inode->direct_blocks[i] != -1)
+        {
+            dir *temp_dir = (dir*)dm->block_list[curr_inode->direct_blocks[i]];
+            for(int j = 0; j < BLOCK_SIZE / sizeof(dir_entry); j++)
+            {
+                dir_entry *temp_entry = &temp_dir->data[j];
+                if(temp_entry->inum != -1)
+                {
+                    if(strcmp(temp_entry->name, new_dir_name) == 0)
+                    {
+                        *curr_dir_inode = temp_entry->inum;
+                        return *curr_dir_inode;
+                    }
+                }
+            }
+        }
+    }
+    return -1;
+
+}
