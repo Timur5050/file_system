@@ -912,7 +912,7 @@ int16_t delete_dir_from_dir(disk_mem *dm, uint32_t dir_inode_to_del, uint32_t cu
 }
 
 
-int16_t delete_smth_by_name(disk_mem* dm, char* smth_name, uint32_t dir_inode)
+int16_t delete_smth_by_name(disk_mem* dm, char* smth_name, uint32_t dir_inode, uint8_t mode_to_del)
 {
     inode *curr_inode = dm->inode_list[dir_inode];
     if(!curr_inode)
@@ -933,6 +933,10 @@ int16_t delete_smth_by_name(disk_mem* dm, char* smth_name, uint32_t dir_inode)
                     inode *entry_inode = dm->inode_list[curr_dir_entr->inum];
 
                     if (!entry_inode) continue; 
+                    if(mode_to_del != entry_inode->mode)
+                    {
+                        return -1;
+                    }
 
                     if(entry_inode->mode == 0)
                     {
@@ -1074,5 +1078,5 @@ int32_t touch(disk_mem *dm, uint32_t curr_dir_inode, char *file_name)
 
 int32_t rm(disk_mem *dm, uint32_t curr_dir_inode, char *file_name)
 {
-    return delete_smth_by_name(dm, file_name, curr_dir_inode);
+    return delete_smth_by_name(dm, file_name, curr_dir_inode, 0);
 }
