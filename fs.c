@@ -579,6 +579,11 @@ int32_t create_dir(
     char *dir_name
 ) 
 {
+    if(check_if_name_is_present_in_dir(dm, inode_number_of_dir, dir_name) == -1)
+    {
+        return -4;
+    }
+
     inode* parent_dir_inode = dm->inode_list[inode_number_of_dir];
     if (NULL == parent_dir_inode) 
     {
@@ -646,6 +651,32 @@ int32_t create_dir(
 }
 
 
+int8_t check_if_name_is_present_in_dir(
+    disk_mem *dm, 
+    uint16_t dir_inode,
+    char *new_name
+)
+{
+    inode *curr_inode = dm->inode_list[dir_inode];
+
+    for(int i = 0; i < DIRECT_BLOCKS; i++)
+    {
+        if(curr_inode->direct_blocks[i] != -1)
+        {
+            dir *temp_dir = (dir*)dm->block_list[curr_inode->direct_blocks[i]];
+            for(int j = 0; j < BLOCK_SIZE / sizeof(dir_entry); j++)
+            {
+                dir_entry *temp_entry = &temp_dir->data[j];
+                if(strcmp(temp_entry->name, new_name) == 0)
+                {
+                    return -1;
+                }
+            }
+        }
+    }
+    return 0;
+}
+
 
 int32_t add_smth_to_dir(
     disk_mem *dm, 
@@ -654,6 +685,12 @@ int32_t add_smth_to_dir(
     char *new_name
 ) // -1 = no such file by inode; -2 = no such dir by inode; -3 = no free space in a dir
 {
+
+    if(check_if_name_is_present_in_dir(dm, dir_inode, new_name) == -1)
+    {
+        return -4;
+    }
+
     if(NULL == dm->inode_list[new_inode])
     {
         return -1;
@@ -917,17 +954,23 @@ int16_t delete_smth_by_name(disk_mem* dm, char* smth_name, uint32_t dir_inode)
     return -1;
 }
 
-char* pwd(disk_mem* dm, uint32_t inode_number_of_dir, char *text_res)
+char* pwd(disk_mem* dm, uint32_t curr_dir_inode, char *text_res)
 {
-    if (inode_number_of_dir == 0)
+    if (curr_dir_inode == 0)
     {
+        if(strlen(text_res) == 0)
+        {
+            strcat(text_res, "/");
+            return text_res;
+        }
+        
         return text_res;
     }
 
     char result[1000] = ""; 
     char temp[300] = "";     
 
-    inode *curr_inode = dm->inode_list[inode_number_of_dir];
+    inode *curr_inode = dm->inode_list[curr_dir_inode];
     inode *parent_dir_inode = NULL;
 
     for (int i = 0; i < DIRECT_BLOCKS; i++)
@@ -952,7 +995,7 @@ char* pwd(disk_mem* dm, uint32_t inode_number_of_dir, char *text_res)
                             {
                                 dir_entry *temp_dir_parent_entry = &temp_dir_parent->data[q];
 
-                                if (temp_dir_parent_entry->inum == inode_number_of_dir)
+                                if (temp_dir_parent_entry->inum == curr_dir_inode)
                                 {
                                     snprintf(temp, sizeof(temp), "/%s", temp_dir_parent_entry->name);
                                     strcat(temp, text_res);
@@ -984,7 +1027,7 @@ void ls(disk_mem *dm, int32_t curr_dir_inode)
                 dir_entry *temp_entry = &temp_dir->data[j];
                 if(temp_entry->inum != -1)
                 {
-                    printf("%s\t", temp_entry->name);
+                    printf("%s  ", temp_entry->name);
                 }
             }
         }
@@ -1017,4 +1060,9 @@ int32_t cd(disk_mem *dm, uint32_t *curr_dir_inode, char *new_dir_name)
     }
     return -1;
 
+}
+
+int32_t mkdir(disk_mem *dm, uint32_t curr_dir_inode, char *dir_name)
+{
+    return create_dir(dm, curr_dir_inode, dir_name);
 }
