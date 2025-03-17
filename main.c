@@ -77,6 +77,7 @@ int main() {
     char text[1000] = "";
     pwd(dm, 1, text);
 
-    printf("\n\n\n%s\n", text);
+    printf("\n%s\n\n", text);
+    ls(dm, 1);
     return 0;
 }
