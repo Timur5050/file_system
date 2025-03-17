@@ -1066,3 +1066,9 @@ int32_t mkdir(disk_mem *dm, uint32_t curr_dir_inode, char *dir_name)
 {
     return create_dir(dm, curr_dir_inode, dir_name);
 }
+
+int32_t touch(disk_mem *dm, uint32_t curr_dir_inode, char *file_name)
+{
+    return create_file(dm, curr_dir_inode, file_name);
+}
+
