@@ -27,19 +27,19 @@ int main() {
     {   
         *(data + i) = i;
     }  
-    int res = create_file(
-        dm,
-        0,
-        file_name
-    );
-    printf("\n\n added file test : \n\n");
-    print_whole_dm(dm);
-    print_all_dir_entries(dm, 0);
-    printf("\n\n\n");
+    // int res = create_file(
+    //     dm,
+    //     0,
+    //     file_name
+    // );
+    // printf("\n\n added file test : \n\n");
+    // print_whole_dm(dm);
+    // print_all_dir_entries(dm, 0);
+    // printf("\n\n\n");
 
     // int8_t a = add_data_to_file(dm, 1, data, 10);
     // print_whole_data_from_file(dm, 1);
-    add_data_to_file(dm, 1, data, 2000);
+    //add_data_to_file(dm, 1, data, 2000);
     // printf("\n\n");
     // print_whole_data_from_file(dm, 1);
     // add_data_to_file(dm, 1, data, 10);
@@ -47,7 +47,7 @@ int main() {
     // print_whole_data_from_file(dm, 1);
     // int res1 = add_data_to_file_by_dir(dm, 0, "hello.txt", data, 10);
     // printf("\n\n");
-    print_whole_data_from_file(dm, 1);
+    //print_whole_data_from_file(dm, 1);
     // printf("\n\nres : %d", res1);
 
     int a = create_dir(dm, 0, "new");
@@ -55,8 +55,28 @@ int main() {
     print_whole_dm(dm);
     print_all_dir_entries(dm, 0);
     // printf("\nres : %d\n", a);
+    int res = create_file(
+        dm,
+        1,
+        file_name
+    );
+    add_data_to_file(dm, 2, data, 2000);
+    // printf("\n\n added dir test : \n\n");
+    // print_whole_dm(dm);
 
+    // delete_smth_by_name(dm, "hello.txt", 1);
 
+    // printf("\n\n added dir test : \n\n");
+    // print_whole_dm(dm);
 
+    // delete_smth_by_name(dm, "new", 0);
+
+    // printf("\n\n added dir test : \n\n");
+    // print_whole_dm(dm);
+
+    char text[1000] = "";
+    pwd(dm, 1, text);
+
+    printf("\n\n\n%s\n", text);
     return 0;
 }
