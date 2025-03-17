@@ -90,4 +90,5 @@ int16_t delete_smth_by_name(disk_mem* dm, char* smth_name, uint32_t dir_inode);
 
 
 char* pwd(disk_mem* dm, uint32_t inode_number_of_dir, char *text_res);
+void ls(disk_mem *dm, int32_t curr_dir_inode);
 #endif 
