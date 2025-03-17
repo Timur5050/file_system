@@ -86,8 +86,8 @@ int32_t create_dir(disk_mem *dm, uint32_t inode_number_of_dir, char *dir_name);
 
 
 int16_t delete_file_from_dir(disk_mem* dm, uint32_t file_inode, uint32_t dir_inode);
-int16_t delete_dir_from_dir(disk_mem *dm, uint32_t dir_inode_to_del, uint32_t curr_dir_inode_index);
-int16_t delete_smth_by_name(disk_mem* dm, char* smth_name, uint32_t dir_inode, uint8_t mode_to_del);
+int16_t delete_dir_from_dir(disk_mem *dm, uint32_t dir_inode_to_del, uint32_t curr_dir_inode_index, int force);
+int16_t delete_smth_by_name(disk_mem* dm, char* smth_name, uint32_t dir_inode, uint8_t mode_to_del, int force);
 
 
 char* pwd(disk_mem* dm, uint32_t curr_dir_inode, char *text_res);
@@ -96,4 +96,5 @@ int32_t cd(disk_mem *dm, uint32_t *curr_dir_inode, char *new_dir_name);
 int32_t mkdir(disk_mem *dm, uint32_t curr_dir_inode, char *dir_name);
 int32_t touch(disk_mem *dm, uint32_t curr_dir_inode, char *file_name);
 int32_t rm(disk_mem *dm, uint32_t curr_dir_inode, char *file_name);
+int32_t rmdir(disk_mem *dm, uint32_t curr_dir_inode, char *dir_name);
 #endif 
