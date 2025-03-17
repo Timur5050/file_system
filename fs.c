@@ -917,9 +917,57 @@ int16_t delete_smth_by_name(disk_mem* dm, char* smth_name, uint32_t dir_inode)
     return -1;
 }
 
+char* pwd(disk_mem* dm, uint32_t inode_number_of_dir, char *text_res)
+{
+    if (inode_number_of_dir == 0)
+    {
+        return text_res;
+    }
 
+    char result[1000] = ""; 
+    char temp[300] = "";     
 
+    inode *curr_inode = dm->inode_list[inode_number_of_dir];
+    inode *parent_dir_inode = NULL;
 
+    for (int i = 0; i < DIRECT_BLOCKS; i++)
+    {   
+        if (curr_inode->direct_blocks[i] != -1)
+        {
+            dir *temp_dir = (dir*)dm->block_list[curr_inode->direct_blocks[i]];
+            for (int j = 0; j < BLOCK_SIZE / sizeof(dir_entry); j++)
+            {
+                dir_entry *temp_dir_entry = &temp_dir->data[j];
 
+                if (strcmp(temp_dir_entry->name, "..") == 0) 
+                {
+                    parent_dir_inode = dm->inode_list[temp_dir_entry->inum]; 
+
+                    for (int k = 0; k < DIRECT_BLOCKS; k++)
+                    {
+                        if (parent_dir_inode->direct_blocks[k] != -1)
+                        {
+                            dir *temp_dir_parent = (dir*)dm->block_list[parent_dir_inode->direct_blocks[k]];
+                            for (int q = 0; q < BLOCK_SIZE / sizeof(dir_entry); q++)
+                            {
+                                dir_entry *temp_dir_parent_entry = &temp_dir_parent->data[q];
+
+                                if (temp_dir_parent_entry->inum == inode_number_of_dir)
+                                {
+                                    snprintf(temp, sizeof(temp), "/%s", temp_dir_parent_entry->name);
+                                    strcat(temp, text_res);
+                                    strcpy(text_res, temp); 
+                                    return pwd(dm, temp_dir_entry->inum, text_res);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    return text_res;
+}
 
 
