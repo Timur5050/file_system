@@ -970,4 +970,24 @@ char* pwd(disk_mem* dm, uint32_t inode_number_of_dir, char *text_res)
     return text_res;
 }
 
+void ls(disk_mem *dm, int32_t curr_dir_inode)
+{
+    inode *curr_inode = dm->inode_list[curr_dir_inode];
 
+    for(int i = 0; i < DIRECT_BLOCKS; i++)
+    {
+        if(curr_inode->direct_blocks[i] != -1)
+        {
+            dir *temp_dir = (dir*)dm->block_list[curr_inode->direct_blocks[i]];
+            for(int j = 0; j < BLOCK_SIZE / sizeof(dir_entry); j++)
+            {
+                dir_entry *temp_entry = &temp_dir->data[j];
+                if(temp_entry->inum != -1)
+                {
+                    printf("%s\t", temp_entry->name);
+                }
+            }
+        }
+    }
+    printf("\n");
+}
