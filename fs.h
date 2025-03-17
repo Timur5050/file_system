@@ -79,6 +79,7 @@ uint16_t create_file(disk_mem* dm, uint32_t inode_number_of_dir, char *file_name
 int8_t add_data_to_file(disk_mem *dm, uint16_t file_inode_number, uint32_t *file_data, uint32_t data_size);
 int8_t add_data_to_file_by_dir(disk_mem *dm, uint16_t directory_inode_number, char *file_name, uint32_t *file_data, uint32_t data_size);
 
+int8_t check_if_name_is_present_in_dir(disk_mem *dm, uint16_t dir_inode, char *new_name);
 int32_t add_smth_to_dir(disk_mem *dm, uint16_t new_inode, uint16_t dir_inode, char *new_name);
 int32_t create_new_dir_inode(disk_mem *dm);
 int32_t create_dir(disk_mem *dm, uint32_t inode_number_of_dir, char *dir_name);
@@ -89,7 +90,8 @@ int16_t delete_dir_from_dir(disk_mem *dm, uint32_t dir_inode_to_del, uint32_t cu
 int16_t delete_smth_by_name(disk_mem* dm, char* smth_name, uint32_t dir_inode);
 
 
-char* pwd(disk_mem* dm, uint32_t inode_number_of_dir, char *text_res);
+char* pwd(disk_mem* dm, uint32_t curr_dir_inode, char *text_res);
 void ls(disk_mem *dm, int32_t curr_dir_inode);
 int32_t cd(disk_mem *dm, uint32_t *curr_dir_inode, char *new_dir_name);
+int32_t mkdir(disk_mem *dm, uint32_t curr_dir_inode, char *dir_name);
 #endif 
