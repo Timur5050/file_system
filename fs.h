@@ -82,4 +82,12 @@ int8_t add_data_to_file_by_dir(disk_mem *dm, uint16_t directory_inode_number, ch
 int32_t add_smth_to_dir(disk_mem *dm, uint16_t new_inode, uint16_t dir_inode, char *new_name);
 int32_t create_new_dir_inode(disk_mem *dm);
 int32_t create_dir(disk_mem *dm, uint32_t inode_number_of_dir, char *dir_name);
+
+
+int16_t delete_file_from_dir(disk_mem* dm, uint32_t file_inode, uint32_t dir_inode);
+int16_t delete_dir_from_dir(disk_mem *dm, uint32_t dir_inode_to_del, uint32_t curr_dir_inode_index);
+int16_t delete_smth_by_name(disk_mem* dm, char* smth_name, uint32_t dir_inode);
+
+
+char* pwd(disk_mem* dm, uint32_t inode_number_of_dir, char *text_res);
 #endif 
