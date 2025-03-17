@@ -1072,3 +1072,7 @@ int32_t touch(disk_mem *dm, uint32_t curr_dir_inode, char *file_name)
     return create_file(dm, curr_dir_inode, file_name);
 }
 
+int32_t rm(disk_mem *dm, uint32_t curr_dir_inode, char *file_name)
+{
+    return delete_smth_by_name(dm, file_name, curr_dir_inode);
+}
