@@ -820,16 +820,20 @@ int16_t delete_file_from_dir(disk_mem* dm, uint32_t file_inode, uint32_t dir_ino
     {
         for(int i = 0; i < DIRECT_BLOCKS; i++)
         {
-            if(inode_of_deleting_item->direct_blocks[i] != -1)
+            if(inode_of_deleting_item->direct_blocks[i] != -1 && dm->block_list[inode_of_deleting_item->direct_blocks[i]] != NULL)
             {
                 free(dm->block_list[inode_of_deleting_item->direct_blocks[i]]);
                 dm->block_list[inode_of_deleting_item->direct_blocks[i]] = NULL;
                 dm->d_bmap[inode_of_deleting_item->direct_blocks[i]] = 0;
             }
         }
-        free(inode_of_deleting_item);
-        dm->inode_list[file_inode] = NULL;
-        dm->i_bmap[file_inode] = 0;
+        if (inode_of_deleting_item != NULL) 
+        {
+            free(inode_of_deleting_item);
+            dm->inode_list[file_inode] = NULL;
+            dm->i_bmap[file_inode] = 0;
+            inode_of_deleting_item = NULL; 
+        }
     }
     else
     {
@@ -838,8 +842,13 @@ int16_t delete_file_from_dir(disk_mem* dm, uint32_t file_inode, uint32_t dir_ino
     return 0;
 }
 
-int16_t delete_dir_from_dir(disk_mem *dm, uint32_t dir_inode_to_del, uint32_t curr_dir_inode_index)
+int16_t delete_dir_from_dir(disk_mem *dm, uint32_t dir_inode_to_del, uint32_t curr_dir_inode_index, int force)
 {
+    if (!dm || dir_inode_to_del >= INODE_BLOCKS || curr_dir_inode_index >= INODE_BLOCKS) 
+    {
+        return -1; 
+    }
+
     inode *inode_of_deleting_item = dm->inode_list[dir_inode_to_del];
     if (!inode_of_deleting_item || inode_of_deleting_item->mode != 1) 
     {
@@ -852,74 +861,112 @@ int16_t delete_dir_from_dir(disk_mem *dm, uint32_t dir_inode_to_del, uint32_t cu
         return -1;
     }
 
-    for(int i = 0; i < DIRECT_BLOCKS; i++)
+    dir_entry *entry_to_del = NULL;
+    
+
+    for (int i = 0; i < DIRECT_BLOCKS; i++)
     {
-        if(curr_dir_inode->direct_blocks[i] != -1)
+        if (curr_dir_inode->direct_blocks[i] != -1)
         {
             dir *curr_dir = dm->block_list[curr_dir_inode->direct_blocks[i]];
-            for(int j = 0; j < BLOCK_SIZE / sizeof(dir_entry); j++)
+            if (!curr_dir) continue;
+
+            for (int j = 0; j < BLOCK_SIZE / sizeof(dir_entry); j++)
             {
-                if(curr_dir->data[j].inum == dir_inode_to_del)
+                if (curr_dir->data[j].inum == dir_inode_to_del)
                 {
-                    curr_dir->data[j].inum = -1;
+                    entry_to_del = &curr_dir->data[j];
                 }
             }
         }
     }
-    if(inode_of_deleting_item->links_count == 1)
+
+    int is_empty = 1; 
+
+
+    for (int i = 0; i < DIRECT_BLOCKS; i++)
     {
-        for(int i = 0; i < DIRECT_BLOCKS; i++)
+        if (inode_of_deleting_item->direct_blocks[i] != -1)
         {
-            if(inode_of_deleting_item->direct_blocks[i] != -1)
+            dir *curr_dir = dm->block_list[inode_of_deleting_item->direct_blocks[i]];
+            if (!curr_dir) continue;
+
+            for (int j = 0; j < BLOCK_SIZE / sizeof(dir_entry); j++)
             {
-                dir *curr_dir = dm->block_list[inode_of_deleting_item->direct_blocks[i]];
-                for(int j = 0; j < BLOCK_SIZE / sizeof(dir_entry); j++)
+                if (curr_dir->data[j].inum != -1 &&
+                    strcmp(curr_dir->data[j].name, ".") != 0 &&
+                    strcmp(curr_dir->data[j].name, "..") != 0)
                 {
-                    if(curr_dir->data[j].inum != -1)
+                    is_empty = 0; 
+                    if(force == 0)
                     {
-                        inode *curr_entry_inode = dm->inode_list[curr_dir->data[j].inum];
-                        if(curr_entry_inode->mode == 0)
+                        return -2;
+                    }
+                    inode *child_inode = dm->inode_list[curr_dir->data[j].inum];
+
+                    if (!child_inode) continue;
+
+                    if (child_inode->mode == 0) 
+                    {
+                        delete_file_from_dir(dm, curr_dir->data[j].inum, dir_inode_to_del);
+                    }
+                    else if (child_inode->mode == 1)
+                    {
+                        int status = delete_dir_from_dir(dm, curr_dir->data[j].inum, dir_inode_to_del, force);
+                        if (status != 0) 
                         {
-                            delete_file_from_dir(dm, curr_dir->data[j].inum, dir_inode_to_del);
-                        }
-                        else if(curr_entry_inode->mode == 1)
-                        {
-                            if (strcmp(curr_dir->data[j].name, ".") == 0 || strcmp(curr_dir->data[j].name, "..") == 0) 
-                            {
-                                continue;
-                            }
-                            delete_dir_from_dir(dm, curr_dir->data[j].inum, dir_inode_to_del);
+                            return status; 
                         }
                     }
                 }
             }
         }
     }
+
+    if (!is_empty && !force) 
+    {
+        return -2; 
+    }
     for (int i = 0; i < DIRECT_BLOCKS; i++) 
     {
         if (inode_of_deleting_item->direct_blocks[i] != -1) 
         {
-            free(dm->block_list[inode_of_deleting_item->direct_blocks[i]]);
-            dm->block_list[inode_of_deleting_item->direct_blocks[i]] = NULL;
-            dm->d_bmap[inode_of_deleting_item->direct_blocks[i]] = 0;
+            if (dm->block_list[inode_of_deleting_item->direct_blocks[i]] != NULL) 
+            {
+                free(dm->block_list[inode_of_deleting_item->direct_blocks[i]]);
+                dm->block_list[inode_of_deleting_item->direct_blocks[i]] = NULL;
+                dm->d_bmap[inode_of_deleting_item->direct_blocks[i]] = 0;
+            }
         }
     }
 
-    free(inode_of_deleting_item);
-    dm->inode_list[dir_inode_to_del] = NULL;
-    dm->i_bmap[dir_inode_to_del] = 0;
+    if (dm->inode_list[dir_inode_to_del] != NULL) 
+    {
+        free(inode_of_deleting_item);
+        dm->inode_list[dir_inode_to_del] = NULL;
+        dm->i_bmap[dir_inode_to_del] = 0;
+    }
 
+    if (entry_to_del != NULL)
+    {
+        entry_to_del->inum = -1;
+        memset(entry_to_del->name, 0, sizeof(entry_to_del->name));
+    }
+
+    return 0; 
 }
 
 
-int16_t delete_smth_by_name(disk_mem* dm, char* smth_name, uint32_t dir_inode, uint8_t mode_to_del)
+
+int16_t delete_smth_by_name(disk_mem* dm, char* smth_name, uint32_t dir_inode, uint8_t mode_to_del, int force)
 {
     inode *curr_inode = dm->inode_list[dir_inode];
     if(!curr_inode)
     {
         return -1;
-    }
-
+    }   
+    
+    int res = 1;
     for(int i = 0; i < DIRECT_BLOCKS; i++)
     {
         if(curr_inode->direct_blocks[i] != -1)
@@ -931,25 +978,34 @@ int16_t delete_smth_by_name(disk_mem* dm, char* smth_name, uint32_t dir_inode, u
                 if(curr_dir_entr->inum != -1 && strcmp(curr_dir_entr->name, smth_name) == 0)
                 {
                     inode *entry_inode = dm->inode_list[curr_dir_entr->inum];
-
                     if (!entry_inode) continue; 
                     if(mode_to_del != entry_inode->mode)
                     {
                         return -1;
                     }
-
+                    
                     if(entry_inode->mode == 0)
                     {
-                        delete_file_from_dir(dm, entry_inode->uid, dir_inode);
+                        res = delete_file_from_dir(dm, entry_inode->uid, dir_inode);
                     }
                     else if(entry_inode->mode == 1)
                     {
-                        delete_dir_from_dir(dm, entry_inode->uid, dir_inode);
+                        if(force)
+                        {
+                            res = delete_dir_from_dir(dm, entry_inode->uid, dir_inode, 1);
+                        }
+                        else
+                        {
+                            res = delete_dir_from_dir(dm, entry_inode->uid, dir_inode, 0);
+                        }
+                        
                     }
-
-                    curr_dir_entr->inum = -1;
-
-                    memset(curr_dir_entr->name, 0, sizeof(curr_dir_entr->name));
+                    
+                    if(res == 0)
+                    {
+                        curr_dir_entr->inum = -1;
+                        memset(curr_dir_entr->name, 0, sizeof(curr_dir_entr->name));
+                    }
                     return 0;
                 }
             }
@@ -1078,5 +1134,10 @@ int32_t touch(disk_mem *dm, uint32_t curr_dir_inode, char *file_name)
 
 int32_t rm(disk_mem *dm, uint32_t curr_dir_inode, char *file_name)
 {
-    return delete_smth_by_name(dm, file_name, curr_dir_inode, 0);
+    return delete_smth_by_name(dm, file_name, curr_dir_inode, 0, 1);
+}
+
+int32_t rmdir(disk_mem *dm, uint32_t curr_dir_inode, char *dir_name)
+{
+    return delete_smth_by_name(dm, dir_name, curr_dir_inode, 1, 0);
 }
