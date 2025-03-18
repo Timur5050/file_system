@@ -99,5 +99,5 @@ int32_t touch(disk_mem *dm, uint32_t curr_dir_inode, char *file_name);
 int32_t rm(disk_mem *dm, uint32_t curr_dir_inode, char *file_name);
 int32_t rmdir(disk_mem *dm, uint32_t curr_dir_inode, char *dir_name, int force);
 int32_t cat(disk_mem *dm, uint32_t curr_dir_inode, char *file_name);
-int32_t echo(disk_mem *dm, uint32_t curr_dir_inode, char *file_name, int flag);
+int32_t echo(disk_mem *dm, uint32_t curr_dir_inode, char *text, int text_size, char *file_name, int flag);
 #endif 
