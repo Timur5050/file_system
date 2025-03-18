@@ -319,7 +319,7 @@ void print_whole_data_from_file(disk_mem *dm, uint32_t inode_number)
             block *curr_block = dm->block_list[curr_inode->direct_blocks[i]];
             for(int j = 0; j < BLOCK_SIZE; j++)
             {
-                printf("%c ", curr_block->data[j]);
+                printf("%c", curr_block->data[j]);
                 start++;
                 if(start == size)
                 {
@@ -436,7 +436,6 @@ int8_t add_data_to_file(
     inode *curr_inode = dm->inode_list[file_inode_number];
     if(NULL == curr_inode || curr_inode->mode != 0)
     {
-        printf("\nhere -1 : %d\n", file_inode_number);
         return -1;
     }
 
@@ -1207,17 +1206,8 @@ int32_t cat(disk_mem *dm, uint32_t curr_dir_inode, char *file_name)
     return print_whole_data_from_file_by_file_name(dm, curr_dir_inode, file_name);
 }
 
-int32_t echo(disk_mem *dm, uint32_t curr_dir_inode, char *file_name, int flag)
+int32_t echo(disk_mem *dm, uint32_t curr_dir_inode, char *text, int text_size, char *file_name, int flag)
 {
-    int counter = 0;
-    char mass[DIRECT_BLOCKS * BLOCK_SIZE];
-    char a;
-    while((a = getchar()) != '\n' && counter < sizeof(mass) - 1)
-    {
-        mass[counter++] = a; 
-    }
-    mass[counter] = '\0';
-    add_data_to_file_by_dir(dm, curr_dir_inode, file_name, mass, counter, flag);
-    
+    return add_data_to_file_by_dir(dm, curr_dir_inode, file_name, text, text_size, flag);
 }
 
