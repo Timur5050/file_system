@@ -179,7 +179,7 @@ int start()
             
             if(size_of_words_mass == 1)
             {
-                printf("rm: missing operand\n");
+                printf("rmdir: missing operand\n");
             }
             else
             {
@@ -191,6 +191,21 @@ int start()
                 else if (res < 0)
                 {
                     printf("rmdir: failed to remove '%s': No such file or directory\n", braken_command[1]);
+                }
+            }
+        }
+        else if(strcmp(braken_command[0], "cat") == 0)
+        {
+            if(size_of_words_mass == 1)
+            {
+                printf("cat: missing operand\n");
+            }
+            else
+            {
+                int res = cat(dm, curr_dir_inode, braken_command[1]);
+                if(res < 0)
+                {
+                    printf("cat: failed to read '%s': No such file\n", braken_command[1]);
                 }
             }
         }
