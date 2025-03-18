@@ -73,7 +73,7 @@ void print_all_dir_entries(disk_mem* dm, uint32_t inode_number_of_dir);
 void print_i_bmap_and_d_bmap(disk_mem *dm);
 void print_whole_dm(disk_mem *dm);
 void print_whole_data_from_file(disk_mem *dm, uint32_t inode_number);
-uint8_t print_whole_data_from_file_by_file_name(disk_mem *dm, uint32_t inode_number_of_dir, char *file_name);
+int8_t print_whole_data_from_file_by_file_name(disk_mem *dm, uint32_t inode_number_of_dir, char *file_name);
 
 uint16_t create_new_file(disk_mem *dm);
 uint16_t create_file(disk_mem* dm, uint32_t inode_number_of_dir, char *file_name);
