@@ -968,7 +968,6 @@ int16_t delete_dir_from_dir(disk_mem *dm, uint32_t dir_inode_to_del, uint32_t cu
             }
         }
     }
-
     if (!is_empty && !force) 
     {
         return -2; 
@@ -1051,8 +1050,12 @@ int16_t delete_smth_by_name(disk_mem* dm, char* smth_name, uint32_t dir_inode, u
                     {
                         curr_dir_entr->inum = -1;
                         memset(curr_dir_entr->name, 0, sizeof(curr_dir_entr->name));
+                        return 0;
                     }
-                    return 0;
+                    if(res == -2)
+                    {
+                        return -2;
+                    }
                 }
             }
         }
@@ -1066,10 +1069,20 @@ char* pwd(disk_mem* dm, uint32_t curr_dir_inode, char *text_res)
     {
         if(strlen(text_res) == 0)
         {
-            strcat(text_res, "/");
+            strcat(text_res, "~");
             return text_res;
         }
-        
+        char text_temp[1000];
+        char *ptr = text_res;
+        int counter = 1;
+        text_temp[0] = '~';
+        while(*ptr != '\0')
+        {
+            text_temp[counter++] = *(ptr++);
+        }
+        text_temp[counter] = '\0';
+        text_res[0] = '\0';
+        strcpy(text_res, text_temp);
         return text_res;
     }
 
@@ -1155,7 +1168,7 @@ int32_t cd(disk_mem *dm, uint32_t *curr_dir_inode, char *new_dir_name)
                 dir_entry *temp_entry = &temp_dir->data[j];
                 if(temp_entry->inum != -1)
                 {
-                    if(strcmp(temp_entry->name, new_dir_name) == 0)
+                    if(strcmp(temp_entry->name, new_dir_name) == 0 && dm->inode_list[temp_entry->inum]->mode == 1)
                     {
                         *curr_dir_inode = temp_entry->inum;
                         return *curr_dir_inode;
@@ -1183,9 +1196,9 @@ int32_t rm(disk_mem *dm, uint32_t curr_dir_inode, char *file_name)
     return delete_smth_by_name(dm, file_name, curr_dir_inode, 0, 1);
 }
 
-int32_t rmdir(disk_mem *dm, uint32_t curr_dir_inode, char *dir_name)
+int32_t rmdir(disk_mem *dm, uint32_t curr_dir_inode, char *dir_name, int force)
 {
-    return delete_smth_by_name(dm, dir_name, curr_dir_inode, 1, 0);
+    return delete_smth_by_name(dm, dir_name, curr_dir_inode, 1, force);
 }
 
 int32_t cat(disk_mem *dm, uint32_t curr_dir_inode, char *file_name)
