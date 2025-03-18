@@ -209,6 +209,45 @@ int start()
                 }
             }
         }
+        else if(strcmp(braken_command[0], "echo") == 0)
+        {
+            if(size_of_words_mass == 1)
+            {
+                printf("\n");
+            }
+            else if(size_of_words_mass == 2)
+            {
+                printf("%s\n", braken_command[1]);
+            }
+            else if(size_of_words_mass == 4)
+            {
+                int counter = 0;
+                char *ptr = braken_command[1];
+                while(*ptr != '\0')
+                {
+                    ptr++;
+                    counter++;
+                }
+                if(strcmp(braken_command[2], ">") == 0)
+                {
+                    int res = echo(dm, curr_dir_inode, braken_command[1], counter, braken_command[3], 1);
+                    if(res < 0)
+                    {
+                        touch(dm, curr_dir_inode, braken_command[3]);
+                        echo(dm, curr_dir_inode, braken_command[1], counter, braken_command[3], 1);
+                    }
+                }
+                else if(strcmp(braken_command[2], ">>") == 0)
+                {
+                    int res = echo(dm, curr_dir_inode, braken_command[1], counter, braken_command[3], 0);
+                    if(res < 0)
+                    {
+                        printf("echo: failed adding text to file '%s', No such file\n", braken_command[3]);
+                    }
+                }
+                
+            }
+        }
         else
         {
             printf("command %s not found\n", command);
