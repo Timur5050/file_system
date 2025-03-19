@@ -381,6 +381,10 @@ int16_t delete_smth_by_name(disk_mem* dm, char* smth_name, uint32_t dir_inode, u
     {
         return -1;
     }   
+    if(strcmp(smth_name, ".") == 0 || strcmp(smth_name, "..") == 0)
+    {
+        return -5;
+    }
     
     int res = 1;
     for(int i = 0; i < DIRECT_BLOCKS; i++)

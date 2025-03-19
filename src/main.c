@@ -156,10 +156,14 @@ int start()
             {
                 if(strcmp(braken_command[1], "-r") == 0)
                 {
-                    if(rm(dm, curr_dir_inode, braken_command[2]) < 0 
+                    if(rmdir(dm, curr_dir_inode, braken_command[2], 1) == -5)
+                    {
+                        printf("rm: refusing to remove '.' or '..' directory: skipping '%s'\n", braken_command[2]);
+                    }
+                    else if(rm(dm, curr_dir_inode, braken_command[2]) < 0 
                     && rmdir(dm, curr_dir_inode, braken_command[2], 1) < 0)
                     {
-                        printf("rm: cannot remove '%s': No such file or directory", braken_command[2]);
+                        printf("rm: cannot remove '%s': No such file or directory\n", braken_command[2]);
                     }
                 }
                 else
@@ -185,6 +189,10 @@ int start()
                 if(res == -2)
                 {
                     printf("mdir: failed to remove '%s': Directory not empty\n", braken_command[1]);
+                }
+                if(res == -5)
+                {
+                    printf("rm: refusing to remove '.' or '..' directory: skipping '%s'\n", braken_command[2]);
                 }
                 else if (res < 0)
                 {
