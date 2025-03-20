@@ -23,6 +23,6 @@ make
 - touch `<file`	creates a new file
 - cat `<file>` displays the content of a file
 #### text handling
-- echo "<text>"	prints <text> to the console
-- echo "<text>" > <file> overwrites <file> with <text>. creates file if it doesn't exist
-- echo "<text>" >> <file>	appends <text> to <file>
+- echo `"<text>"`	prints <text> to the console
+- echo `"<text>"` > <file> overwrites <file> with <text>. creates file if it doesn't exist
+- echo `"<text>"` >> <file>	appends <text> to <file>
