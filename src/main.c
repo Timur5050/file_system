@@ -3,6 +3,187 @@
 
 uint32_t curr_dir_inode = 0;
 
+void convert_command_text(char *text, char* res_mass)
+{
+    char **mass = (char**)malloc(sizeof(char*) * 256);
+    int mass_counter = 0;
+    char *ptr = text;
+    char temp_mass[2048];
+    int temp_counter = 0;
+    int bracket_counter = 0;
+    while(*ptr != '\0')
+    {
+        if(*ptr == '"')
+        {
+            if(bracket_counter % 2 != 0)
+            {
+                if(temp_counter > 0)
+                {
+                    temp_mass[temp_counter] = '\0';
+                    mass[mass_counter] = strdup(temp_mass);
+                    mass_counter++;
+                    temp_counter = 0;
+                }
+            }
+            bracket_counter++;
+        }
+        else if(*ptr != ' ' && *ptr != '"')
+        {
+            temp_mass[temp_counter] = *ptr;
+            temp_counter++;
+        }
+        else if(*ptr == ' ' && bracket_counter % 2 != 0)
+        {
+            temp_mass[temp_counter] = *ptr;
+            temp_counter++;
+        }
+        else if(*ptr == ' ' && bracket_counter % 2 == 0)
+        {
+            if(temp_counter > 0)
+            {
+                temp_mass[temp_counter] = '\0';
+                mass[mass_counter] = strdup(temp_mass);
+                mass_counter++;
+                temp_counter = 0;
+            }
+        }
+        ptr++;
+    }   
+    if(temp_counter > 0)
+    {
+        temp_mass[temp_counter] = '\0';
+        mass[mass_counter++] = strdup(temp_mass);
+    }
+    int counter = 0;
+    for (int i = 0; i < mass_counter; i++)
+    {
+        char *word = mass[i];
+        while (*word != '\0')
+        {
+            res_mass[counter++] = *word++;
+        }
+        if (i < mass_counter - 1)
+        {
+            res_mass[counter++] = ' '; 
+        }
+        free(mass[i]); 
+    }
+    res_mass[counter] = '\0'; 
+
+    free(mass); 
+}
+
+
+char **break_echo_longer_command(char *command, int i, int *size_of_words_mass)
+{
+    char **mass = (char **)malloc(sizeof(char *) * 16); 
+    mass[0] = strdup("echo");
+    *size_of_words_mass = 0;
+    *size_of_words_mass += 1;
+    char* ptr = command + i;
+    
+    int brackets_counter = 0;
+    char text_to_out[8192];
+    memset(text_to_out, 0, sizeof(text_to_out));
+    int text_counter = 0;
+    char a = 0;
+    while(1)
+    {
+        if((brackets_counter % 2 == 0 && *ptr == '>') || *ptr == '\0')
+        {
+            break;
+        }   
+        if(*ptr == '"')
+        {
+            brackets_counter++;
+        }
+        text_to_out[text_counter] = *ptr;
+        text_counter++;
+        ptr++;
+    }
+    if(*ptr == '>')
+    {
+        char *text_to_add = (char*)malloc(4096);
+        convert_command_text(text_to_out, text_to_add);
+        mass[1] = strdup(text_to_add);
+        ptr++;
+        if(*ptr == '>')
+        {
+            mass[2] = strdup(">>");
+        }
+        else
+        {
+            mass[2] = strdup(">");
+        }
+        *size_of_words_mass += 2;
+        
+        char *temp_file_name = (char*)malloc(2048);
+        int file_name_counter = 0;
+        while(*ptr == ' ' || *ptr == '>') ptr++;
+        while(*ptr != '\0' && *ptr != ' ')
+        {
+            temp_file_name[file_name_counter] = *ptr;
+            ptr++;
+            file_name_counter++;
+        }
+        temp_file_name[file_name_counter] = '\0';
+        mass[3] = strdup(temp_file_name);
+        *size_of_words_mass += 1;
+        free(temp_file_name);
+        free(text_to_add);
+        return mass;
+    }
+    text_to_out[text_counter++] = '\n';
+    while(1)
+    {
+        a = getchar();
+        if(a == '"') brackets_counter++;
+        if(brackets_counter % 2 == 0 && a == '>')
+        {
+            break;
+        }
+        else
+        {
+            text_to_out[text_counter] = a;
+            text_counter++;
+        }
+    }
+    text_to_out[text_counter] = '\0';
+    char *text_to_add = (char*)malloc(4096);
+    convert_command_text(text_to_out, text_to_add);
+    mass[1] = strdup(text_to_add);
+
+    a = getchar();
+
+    if(a == '>')
+    {
+        mass[2] = strdup(">>");
+    }
+    else
+    {
+        mass[2] = strdup(">");
+    }
+    *size_of_words_mass += 2;
+    char *temp_file_name = (char*)malloc(2048);
+    int file_name_counter = 0;
+
+    while(a == ' ' || a == '>') a = getchar(); 
+    
+    while(a != '\n')
+    {
+        temp_file_name[file_name_counter] = a;
+        a = getchar();
+        file_name_counter++;
+    }
+    temp_file_name[file_name_counter] = '\0';
+    mass[3] = temp_file_name;
+    *size_of_words_mass += 1;
+    free(temp_file_name);
+    free(text_to_add);
+    return mass;
+}
+
+
 char **break_the_command(char *command, int size_of_command, int *size_of_words_mass)
 {
     char **mass = (char **)malloc(sizeof(char *) * 16); 
@@ -27,6 +208,12 @@ char **break_the_command(char *command, int size_of_command, int *size_of_words_
                 mass[*size_of_words_mass] = strdup(word); 
                 if (!mass[*size_of_words_mass]) return NULL; 
                 (*size_of_words_mass)++;
+
+                if(strcmp(word, "echo") == 0)
+                {
+                    return break_echo_longer_command(command, i, size_of_words_mass);
+                }
+
             }
             word_counter = 0;
         }
