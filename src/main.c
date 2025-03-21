@@ -176,7 +176,7 @@ char **break_echo_longer_command(char *command, int i, int *size_of_words_mass)
         file_name_counter++;
     }
     temp_file_name[file_name_counter] = '\0';
-    mass[3] = temp_file_name;
+    mass[3] = strdup(temp_file_name);
     *size_of_words_mass += 1;
     free(temp_file_name);
     free(text_to_add);
@@ -211,9 +211,20 @@ char **break_the_command(char *command, int size_of_command, int *size_of_words_
 
                 if(strcmp(word, "echo") == 0)
                 {
-                    return break_echo_longer_command(command, i, size_of_words_mass);
+                    int bracket_counter = 0;
+                    int has_sigh = 0;
+                    char *ptr = command;
+                    while(*ptr != '\0')
+                    {
+                        if(*ptr == '"') bracket_counter++;
+                        if(*ptr == '>') has_sigh;
+                        ptr++;
+                    }
+                    if(!(bracket_counter % 2 == 0 && !has_sigh))
+                    {
+                        return break_echo_longer_command(command, i, size_of_words_mass);
+                    }
                 }
-
             }
             word_counter = 0;
         }
