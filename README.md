@@ -3,8 +3,6 @@ When I was deciding what to study next after backend development, I came across 
 
 
 
-
-
 # How to run
 ```sh
 mkdir build && cd build
